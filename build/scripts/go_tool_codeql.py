@@ -105,11 +105,23 @@ def _get_virtual_src(gopath_root, relpath, get_import_path):
     return os.path.join(gopath_root, 'src', import_path, os.path.basename(relpath))
 
 
+def _get_current_pkg_virtual_src(args, gopath_root, path):
+    return os.path.join(_get_pkg_root(args, gopath_root), os.path.basename(path))
+
+
 def _get_materialized_src(args, relpath, get_import_path):
     import_path, is_std = get_import_path(os.path.dirname(relpath))
     if is_std:
         return None
     return os.path.join(args.source_root, relpath)
+
+
+def _get_current_pkg_materialized_src(args, path):
+    return os.path.join(args.source_root, args.module_path, os.path.basename(path))
+
+
+def _get_symres_root(args):
+    return os.path.join(os.path.dirname(args.build_root), 'symres')
 
 
 def _iter_generated_go_files(args):
@@ -118,12 +130,23 @@ def _iter_generated_go_files(args):
     if args.mode == 'test' and args.xtest_srcs:
         go_files.extend(args.xtest_srcs)
 
+    symres_root = _get_symres_root(args) + os.path.sep
     for src in go_files:
         abs_src = os.path.abspath(src)
-        if not abs_src.startswith(args.build_root_dir) or abs_src in seen:
+        if not (abs_src.startswith(args.build_root_dir) or abs_src.startswith(symres_root)) or abs_src in seen:
             continue
         seen.add(abs_src)
         yield abs_src
+
+
+def _should_materialize_generated_source(path):
+    base = os.path.basename(path)
+    return not (
+        base.endswith('.cgo1.go')
+        or base.endswith('.res.go')
+        or base == '_cgo_gotypes.go'
+        or base == '_cgo_import.go'
+    )
 
 
 def _materialize_generated_sources(args, get_import_path):
@@ -131,8 +154,13 @@ def _materialize_generated_sources(args, get_import_path):
     created = []
 
     for abs_src in _iter_generated_go_files(args):
-        rel_src = os.path.relpath(abs_src, args.build_root)
-        dst = _get_materialized_src(args, rel_src, get_import_path)
+        if not _should_materialize_generated_source(abs_src):
+            continue
+        if abs_src.startswith(args.build_root_dir):
+            rel_src = os.path.relpath(abs_src, args.build_root)
+            dst = _get_materialized_src(args, rel_src, get_import_path)
+        else:
+            dst = _get_current_pkg_materialized_src(args, abs_src)
         if not dst or os.path.lexists(dst):
             continue
         os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -169,6 +197,8 @@ def _write_overlay(args, gopath_root, materialized_sources, get_import_path):
         if abs_src.startswith(args.build_root_dir):
             rel_src = os.path.relpath(abs_src, args.build_root)
             virtual_src = _get_virtual_src(gopath_root, rel_src, get_import_path)
+        elif abs_src.startswith(_get_symres_root(args) + os.path.sep):
+            virtual_src = _get_current_pkg_virtual_src(args, gopath_root, abs_src)
         else:
             virtual_src = os.path.join(_get_pkg_root(args, gopath_root), os.path.basename(src))
         if not virtual_src:
@@ -180,8 +210,11 @@ def _write_overlay(args, gopath_root, materialized_sources, get_import_path):
     for abs_src in _iter_generated_go_files(args):
         if abs_src in materialized_sources:
             continue
-        rel_src = os.path.relpath(abs_src, args.build_root)
-        virtual_src = _get_virtual_src(gopath_root, rel_src, get_import_path)
+        if abs_src.startswith(args.build_root_dir):
+            rel_src = os.path.relpath(abs_src, args.build_root)
+            virtual_src = _get_virtual_src(gopath_root, rel_src, get_import_path)
+        else:
+            virtual_src = _get_current_pkg_virtual_src(args, gopath_root, abs_src)
         if not virtual_src or os.path.abspath(virtual_src) == abs_src:
             continue
         replace.setdefault(virtual_src, abs_src)

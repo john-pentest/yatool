@@ -43,19 +43,6 @@ def normalize_callee(expr: str) -> str:
     return expr
 
 
-def canonical_go_file(path: str) -> str:
-    if path.endswith(".cgo1.go"):
-        return path[: -len(".cgo1.go")] + ".go"
-    return path
-
-
-def caller_node_id(caller_file: str, caller_name: str, caller_qname: str) -> str:
-    canonical_file = canonical_go_file(caller_file)
-    if canonical_file != caller_file:
-        return f"func::{canonical_file}::{caller_name}"
-    return f"func::{caller_qname or canonical_file + '::' + caller_name}"
-
-
 def short_label(kind: str, name: str, file_name: str) -> str:
     if kind == "func":
         return f"{Path(file_name).stem}.{name}"
@@ -119,6 +106,39 @@ def fmt_loc(prefix: str, path: str, line: str | int, col: str | int, include_pat
     return f"{prefix}@{line_i}:{col_i or 1}"
 
 
+def filter_to_main_component(nodes, edges):
+    outgoing = defaultdict(list)
+    for src, dst in edges:
+        outgoing[src].append(dst)
+
+    roots = [
+        node_id
+        for node_id, data in nodes.items()
+        if data["kind"] == "func" and short_label(data["kind"], data["name"], data["file"]) == "main.main"
+    ]
+    if not roots:
+        return nodes, edges
+
+    project_roots = [
+        node_id for node_id in roots if nodes[node_id].get("detail", "").startswith("a.yandex-team.ru/")
+    ]
+    if project_roots:
+        roots = project_roots
+
+    reachable = set()
+    queue = deque(roots)
+    while queue:
+        current = queue.popleft()
+        if current in reachable:
+            continue
+        reachable.add(current)
+        queue.extend(outgoing.get(current, ()))
+
+    filtered_nodes = {node_id: data for node_id, data in nodes.items() if node_id in reachable}
+    filtered_edges = [(src, dst) for src, dst in edges if src in reachable and dst in reachable]
+    return filtered_nodes, filtered_edges
+
+
 def main() -> int:
     if len(sys.argv) != 3:
         print("usage: render_callgraph_svg.py <input.csv> <output.svg>", file=sys.stderr)
@@ -140,11 +160,11 @@ def main() -> int:
         )
 
     for row in rows:
-        caller_file = canonical_go_file(row["caller_file"])
+        caller_file = row["caller_file"]
         caller_name = row["caller_name"]
         caller_qname = row.get("caller_qname", "")
 
-        src = caller_node_id(row["caller_file"], caller_name, caller_qname)
+        src = f"func::{caller_qname or caller_file + '::' + caller_name}"
         node = nodes.setdefault(
             src,
             {
@@ -180,10 +200,10 @@ def main() -> int:
             func_nodes_by_name[qname_tail(callee_qname)].add(dst)
 
     for row in rows:
-        caller_file = canonical_go_file(row["caller_file"])
+        caller_file = row["caller_file"]
         caller_name = row["caller_name"]
         caller_qname = row.get("caller_qname", "")
-        src = caller_node_id(row["caller_file"], caller_name, caller_qname)
+        src = f"func::{caller_qname or caller_file + '::' + caller_name}"
 
         if enriched_mode:
             callee_name = pick_display_name(row)
@@ -223,6 +243,8 @@ def main() -> int:
             "</text></svg>"
         )
         return 0
+
+    nodes, edges = filter_to_main_component(nodes, edges)
 
     indegree = {node_id: 0 for node_id in nodes}
     outgoing = defaultdict(list)
