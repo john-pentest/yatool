@@ -1,0 +1,9 @@
+RECURSE(
+    example1_basic
+    example2_dep_main_to_lib
+    example3_dep_lib_to_main
+    example4_cgo
+    example5_codegen
+    example6_vendor
+    example7_proto
+)

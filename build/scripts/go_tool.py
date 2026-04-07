@@ -17,6 +17,7 @@ from functools import reduce
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import process_command_files as pcf  # noqa: E402
 import process_whole_archive_option as pwa  # noqa: E402
+import go_tool_codeql  # noqa: E402
 
 arc_project_prefix = 'a.yandex-team.ru/'
 # FIXME: make version-independent
@@ -50,6 +51,10 @@ def preprocess_cgo1(src_path, dst_path, source_root):
 
 
 def preprocess_args(args):
+    args.peers = args.peers or []
+    args.non_local_peers = args.non_local_peers or []
+    args.cgo_peers = args.cgo_peers or []
+
     # Temporary work around for noauto
     if args.cgo_srcs and len(args.cgo_srcs) > 0:
         cgo_srcs_set = set(args.cgo_srcs)
@@ -947,6 +952,7 @@ if __name__ == '__main__':
     try:
         with create_strip_symlink():
             dispatch[args.mode](args)
+            go_tool_codeql.maybe_run(args, call, get_import_path, arc_project_prefix, vendor_prefix)
         exit_code = 0
     except subprocess.CalledProcessError as e:
         sys.stderr.write('{} returned non-zero exit code {}.\n{}\n'.format(' '.join(e.cmd), e.returncode, e.output))

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1860" height="535" viewBox="0 0 1860 535">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,3 L0,6 z" fill="#8a3b12"/></marker></defs>
+<rect width="100%" height="100%" fill="#fbf7ef"/>
+<path d="M 570 216.5 C 620.0 216.5, 620.0 318.5, 670 318.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 1190 443.0 C 1240.0 443.0, 1240.0 84.5, 1290 84.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 443.0, 670 443.0" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 201.5, 670 201.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 84.5, 670 84.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<rect x="50" y="172" rx="14" ry="14" width="520" height="89" fill="#fff8dc" stroke="#5b4636" stroke-width="1.6"/>
+<text x="66" y="196" font-family="monospace" font-size="16" fill="#2f241d">buildinfo.InitBuildInfo</text>
+<text x="66" y="220" font-family="monospace" font-size="12" fill="#7a6858">a.yandex-team.ru/library/go/core/buildinfo.InitBuildInfo</text>
+<text x="66" y="239" font-family="monospace" font-size="12" fill="#8a3b12">decl@go/core/buildinfo/buildinfo.go:54:1</text>
+<rect x="670" y="274" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="298" font-family="monospace" font-size="16" fill="#2f241d">strings.TrimRight</text>
+<text x="686" y="322" font-family="monospace" font-size="12" fill="#7a6858">strings.TrimRight</text>
+<text x="686" y="341" font-family="monospace" font-size="12" fill="#8a3b12">call@go/core/buildinfo/buildinfo.go:55:24</text>
+<rect x="670" y="391" rx="14" ry="14" width="520" height="104" fill="#fff8dc" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="415" font-family="monospace" font-size="16" fill="#2f241d">source.ReadCommand</text>
+<text x="686" y="439" font-family="monospace" font-size="12" fill="#7a6858">a.yandex-team.ru/junk/nermishkin/codeql-gofix/</text>
+<text x="686" y="454" font-family="monospace" font-size="12" fill="#7a6858">example3_dep_lib_to_main/internal/source.ReadCommand</text>
+<text x="686" y="473" font-family="monospace" font-size="12" fill="#8a3b12">decl@example3_dep_lib_to_main/internal/source/source.go:5:1</text>
+<rect x="50" y="40" rx="14" ry="14" width="520" height="104" fill="#fff8dc" stroke="#5b4636" stroke-width="1.6"/>
+<text x="66" y="64" font-family="monospace" font-size="16" fill="#2f241d">main.main</text>
+<text x="66" y="88" font-family="monospace" font-size="12" fill="#7a6858">a.yandex-team.ru/junk/nermishkin/codeql-gofix/</text>
+<text x="66" y="103" font-family="monospace" font-size="12" fill="#7a6858">example3_dep_lib_to_main/hello.main</text>
+<text x="66" y="122" font-family="monospace" font-size="12" fill="#8a3b12">decl@codeql-gofix/example3_dep_lib_to_main/hello/main.go:9:1</text>
+<rect x="670" y="157" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="181" font-family="monospace" font-size="16" fill="#2f241d">exec.Command</text>
+<text x="686" y="205" font-family="monospace" font-size="12" fill="#7a6858">os/exec.Command</text>
+<text x="686" y="224" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example3_dep_lib_to_main/hello/main.go:15:6</text>
+<rect x="670" y="40" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="64" font-family="monospace" font-size="16" fill="#2f241d">exec.Cmd.Run</text>
+<text x="686" y="88" font-family="monospace" font-size="12" fill="#7a6858">os/exec.Cmd.Run</text>
+<text x="686" y="107" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example3_dep_lib_to_main/hello/main.go:15:6</text>
+<rect x="1290" y="40" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="1306" y="64" font-family="monospace" font-size="16" fill="#2f241d">len</text>
+<text x="1306" y="88" font-family="monospace" font-size="12" fill="#7a6858">signature type</text>
+<text x="1306" y="107" font-family="monospace" font-size="12" fill="#8a3b12">call@example3_dep_lib_to_main/internal/source/source.go:6:5</text>
+</svg>

@@ -1,0 +1,3 @@
+- description: Tutorial Go CodeQL cases
+- query: cli_arg_command.ql
+- query: vendor_arg_flow.ql

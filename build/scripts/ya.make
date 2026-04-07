@@ -86,6 +86,7 @@ ELSEIF (PYTHON3)
         generate_pom.py
         generate_win_vfs.py
         go_proto_wrapper.py
+        go_tool_codeql.py
         iwyu.py
         iwyu_arch.py
         java_command_file.py
