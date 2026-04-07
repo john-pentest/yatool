@@ -37,32 +37,10 @@ CODEQL_BUILD_FLAGS_WITH_VALUE = {
     '-tags',
     '-toolexec',
 }
-CODEQL_ENV_SNAPSHOT = '.codeql-go-env.json'
-CODEQL_ENV_PREFIXES = ('CODEQL_', 'SEMMLE_', 'LGTM_')
-
-
-def _get_env_snapshot_path(args):
-    return os.path.join(args.source_root, CODEQL_ENV_SNAPSHOT)
-
-
-def _load_env_snapshot(args):
-    path = _get_env_snapshot_path(args)
-    if not os.path.isfile(path):
-        return {}
-    with open(path) as snapshot_file:
-        data = json.load(snapshot_file)
-    return {str(key): str(value) for key, value in data.items()}
-
-
-def _get_runtime_env(args):
-    env = os.environ.copy()
-    for key, value in _load_env_snapshot(args).items():
-        env.setdefault(key, value)
-    return env
 
 
 def _get_extractor_root(args):
-    return _get_runtime_env(args).get('CODEQL_EXTRACTOR_GO_ROOT')
+    return os.environ.get('CODEQL_EXTRACTOR_GO_ROOT')
 
 
 def _enabled(args):
@@ -270,7 +248,7 @@ def _filter_build_flags(flags):
 
 
 def _get_env(args, gopath_root):
-    env = _get_runtime_env(args)
+    env = os.environ.copy()
     env['PATH'] = os.path.join(args.toolchain_root, 'bin') + os.pathsep + env.get('PATH', '')
     env['GOROOT'] = args.toolchain_root
     env['GOPATH'] = gopath_root
