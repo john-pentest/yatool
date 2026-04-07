@@ -1,0 +1,4 @@
+name: yandex/codeql-go-tutorial-cases
+version: 0.0.0
+dependencies:
+  codeql/go-queries: "*"

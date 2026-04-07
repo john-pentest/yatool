@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1339" viewBox="0 0 1240 1339">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,3 L0,6 z" fill="#8a3b12"/></marker></defs>
+<rect width="100%" height="100%" fill="#fbf7ef"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 552.5, 670 552.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 903.5, 670 903.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 786.5, 670 786.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 1254.5, 670 1254.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 669.5, 670 669.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 201.5, 670 201.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 84.5, 670 84.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 216.5 C 620.0 216.5, 620.0 318.5, 670 318.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 435.5, 670 435.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 1137.5, 670 1137.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M 570 92.0 C 620.0 92.0, 620.0 1020.5, 670 1020.5" fill="none" stroke="#8a3b12" stroke-width="2.4" marker-end="url(#arrow)"/>
+<rect x="50" y="40" rx="14" ry="14" width="520" height="104" fill="#fff8dc" stroke="#5b4636" stroke-width="1.6"/>
+<text x="66" y="64" font-family="monospace" font-size="16" fill="#2f241d">main.main</text>
+<text x="66" y="88" font-family="monospace" font-size="12" fill="#7a6858">a.yandex-team.ru/junk/nermishkin/codeql-gofix/example4_cgo/</text>
+<text x="66" y="103" font-family="monospace" font-size="12" fill="#7a6858">hello.main</text>
+<text x="66" y="122" font-family="monospace" font-size="12" fill="#8a3b12">decl@codeql-gofix/example4_cgo/hello/main.go:15:1</text>
+<rect x="670" y="157" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="181" font-family="monospace" font-size="16" fill="#2f241d">exec.Command</text>
+<text x="686" y="205" font-family="monospace" font-size="12" fill="#7a6858">os/exec.Command</text>
+<text x="686" y="224" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:26:6</text>
+<rect x="670" y="40" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="64" font-family="monospace" font-size="16" fill="#2f241d">exec.Cmd.Run</text>
+<text x="686" y="88" font-family="monospace" font-size="12" fill="#7a6858">os/exec.Cmd.Run</text>
+<text x="686" y="107" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:26:6</text>
+<rect x="50" y="172" rx="14" ry="14" width="520" height="89" fill="#fff8dc" stroke="#5b4636" stroke-width="1.6"/>
+<text x="66" y="196" font-family="monospace" font-size="16" fill="#2f241d">buildinfo.InitBuildInfo</text>
+<text x="66" y="220" font-family="monospace" font-size="12" fill="#7a6858">a.yandex-team.ru/library/go/core/buildinfo.InitBuildInfo</text>
+<text x="66" y="239" font-family="monospace" font-size="12" fill="#8a3b12">decl@go/core/buildinfo/buildinfo.go:54:1</text>
+<rect x="670" y="274" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="298" font-family="monospace" font-size="16" fill="#2f241d">strings.TrimRight</text>
+<text x="686" y="322" font-family="monospace" font-size="12" fill="#7a6858">strings.TrimRight</text>
+<text x="686" y="341" font-family="monospace" font-size="12" fill="#8a3b12">call@go/core/buildinfo/buildinfo.go:55:24</text>
+<rect x="670" y="508" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="532" font-family="monospace" font-size="16" fill="#2f241d">CString</text>
+<text x="686" y="556" font-family="monospace" font-size="12" fill="#7a6858">invalid type</text>
+<text x="686" y="575" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:16:10</text>
+<rect x="670" y="859" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="883" font-family="monospace" font-size="16" fill="#2f241d">free</text>
+<text x="686" y="907" font-family="monospace" font-size="12" fill="#7a6858">invalid type</text>
+<text x="686" y="926" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:17:8</text>
+<rect x="670" y="742" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="766" font-family="monospace" font-size="16" fill="#2f241d">SayHello</text>
+<text x="686" y="790" font-family="monospace" font-size="12" fill="#7a6858">invalid type</text>
+<text x="686" y="809" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:18:14</text>
+<rect x="670" y="1210" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="1234" font-family="monospace" font-size="16" fill="#2f241d">len</text>
+<text x="686" y="1258" font-family="monospace" font-size="12" fill="#7a6858">signature type</text>
+<text x="686" y="1277" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:21:5</text>
+<rect x="670" y="625" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="649" font-family="monospace" font-size="16" fill="#2f241d">GoString</text>
+<text x="686" y="673" font-family="monospace" font-size="12" fill="#7a6858">invalid type</text>
+<text x="686" y="692" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:25:6</text>
+<rect x="670" y="391" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="415" font-family="monospace" font-size="16" fill="#2f241d">(...)</text>
+<text x="686" y="439" font-family="monospace" font-size="12" fill="#7a6858">invalid type</text>
+<text x="686" y="458" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:16:10</text>
+<rect x="670" y="1093" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="1117" font-family="monospace" font-size="16" fill="#2f241d">function literal</text>
+<text x="686" y="1141" font-family="monospace" font-size="12" fill="#7a6858">signature type</text>
+<text x="686" y="1160" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:17:8</text>
+<rect x="670" y="976" rx="14" ry="14" width="520" height="89" fill="#f8efe3" stroke="#5b4636" stroke-width="1.6"/>
+<text x="686" y="1000" font-family="monospace" font-size="16" fill="#2f241d">function call</text>
+<text x="686" y="1024" font-family="monospace" font-size="12" fill="#7a6858">signature type</text>
+<text x="686" y="1043" font-family="monospace" font-size="12" fill="#8a3b12">call@codeql-gofix/example4_cgo/hello/main.go:17:8</text>
+</svg>
