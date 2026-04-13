@@ -6,4 +6,5 @@ RECURSE(
     example5_codegen
     example6_vendor
     example7_proto
+    example8_import_shared_lib
 )

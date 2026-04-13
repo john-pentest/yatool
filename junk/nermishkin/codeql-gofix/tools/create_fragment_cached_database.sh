@@ -32,18 +32,15 @@ fi
 YA_BIN=${YA_BIN:-$REPO_ROOT/ya}
 YA_CACHE_DIR=${YA_CACHE_DIR:-$OUTPUT_ROOT/ya-cache}
 YA_LOGS_ROOT=${YA_LOGS_ROOT:-$OUTPUT_ROOT/ya-logs}
-GRAPH_JSON=${GRAPH_JSON:-$OUTPUT_ROOT/target-graph.json}
 FRAGMENT_CACHE_DIR=${FRAGMENT_CACHE_DIR:-$OUTPUT_ROOT/fragment-cache}
 BOOTSTRAP_TEMPLATE_DB=${BOOTSTRAP_TEMPLATE_DB:-$OUTPUT_ROOT/bootstrap-template-db}
 BOOTSTRAP_BUILD_OUT=${BOOTSTRAP_BUILD_OUT:-$OUTPUT_ROOT/bootstrap-build-output}
-BOOTSTRAP_MANIFEST=${BOOTSTRAP_MANIFEST:-$OUTPUT_ROOT/bootstrap-manifest.json}
+BOOTSTRAP_REGISTRY_DIR=${BOOTSTRAP_REGISTRY_DIR:-$OUTPUT_ROOT/bootstrap-registry}
 ASSEMBLED_DB=${ASSEMBLED_DB:-$OUTPUT_ROOT/assembled-db}
 WARM_BUILD_OUT=${WARM_BUILD_OUT:-$OUTPUT_ROOT/warm-build-output}
-WARM_MANIFEST=${WARM_MANIFEST:-$OUTPUT_ROOT/warm-manifest.json}
+WARM_REGISTRY_DIR=${WARM_REGISTRY_DIR:-$OUTPUT_ROOT/warm-registry}
 FINAL_DB=${FINAL_DB:-$OUTPUT_ROOT/final-db}
 SUMMARY_TXT=${SUMMARY_TXT:-$OUTPUT_ROOT/summary.txt}
-REPO_IMPORT_PREFIX=${REPO_IMPORT_PREFIX:-a.yandex-team.ru}
-MANIFEST_TOOL=${MANIFEST_TOOL:-$SCRIPT_DIR/ya_codeql_fragment_manifest.py}
 BUILD_FRAGMENT_CACHE_TOOL=${BUILD_FRAGMENT_CACHE_TOOL:-$SCRIPT_DIR/build_fragment_cache.py}
 INJECT_FRAGMENT_CACHE_TOOL=${INJECT_FRAGMENT_CACHE_TOOL:-$SCRIPT_DIR/inject_fragment_cache.py}
 REUSE_EXISTING_CACHE=${REUSE_EXISTING_CACHE:-true}
@@ -89,59 +86,55 @@ init_db() {
     "$db" >"$OUTPUT_ROOT/$(basename "$db")-init.log" 2>&1
 }
 
-trace_clean() {
+trace_build() {
   db=$1
   build_out=$2
-  log_file=$3
-  rm -rf "$build_out"
+  registry_dir=$3
+  log_file=$4
+  shift 4
+  rm -rf "$registry_dir"
   mkdir -p "$build_out"
   CODEQL_EXTRACTOR_GO_EXTRACT_HTML=no "$CODEQL_BIN" database trace-command "$db" -- \
-    env YA_CACHE_DIR="$YA_CACHE_DIR" YA_LOGS_ROOT="$YA_LOGS_ROOT" \
-    "$YA_BIN" make -r --clear --rebuild --no-yt-store -o "$build_out" "$TARGET" >"$log_file" 2>&1
+    env YA_CACHE_DIR="$YA_CACHE_DIR" YA_LOGS_ROOT="$YA_LOGS_ROOT" YA_CODEQL_FRAGMENT_REGISTRY_DIR="$registry_dir" \
+    "$YA_BIN" make "$@" -o "$build_out" "$TARGET" >"$log_file" 2>&1
 }
 
-prepare_warm_build_out() {
-  src_build_out=$1
-  dst_build_out=$2
-  graph_json=$3
-  rm -rf "$dst_build_out"
-  cp -R "$src_build_out" "$dst_build_out"
-  python3 - "$graph_json" "$dst_build_out" <<'PY'
+remove_target_outputs() {
+  registry_dir=$1
+  build_out=$2
+  target=$3
+  python3 - "$registry_dir" "$build_out" "$target" <<'PY'
 import json
-import shutil
+import os
 import sys
 from pathlib import Path
 
-graph_json = Path(sys.argv[1])
+registry_dir = Path(sys.argv[1])
 build_out = Path(sys.argv[2])
-with graph_json.open() as fh:
-    graph = json.load(fh)
-
-by_uid = {node.get("uid"): node for node in graph.get("graph", [])}
-for uid in graph.get("result", []):
-    node = by_uid.get(uid)
-    if not node:
+target = sys.argv[3]
+for path in sorted(registry_dir.glob('*.json')):
+    with path.open() as fh:
+        data = json.load(fh)
+    if data.get('module_path') != target:
         continue
-    for output in node.get("outputs") or []:
-        if not output.startswith("$(BUILD_ROOT)/"):
-            continue
-        rel = output.replace("$(BUILD_ROOT)/", "", 1)
-        path = build_out / rel
-        if path.is_dir():
-            shutil.rmtree(path, ignore_errors=True)
-        elif path.exists():
-            path.unlink()
+    output_path = data.get('output', '')
+    base = os.path.basename(output_path)
+    if base:
+        candidate = build_out / target / base
+        if candidate.exists():
+            candidate.unlink()
+    fragment = build_out / target / 'codeql_fragment.json'
+    if fragment.exists():
+        fragment.unlink()
+    break
 PY
 }
 
-trace_nocu() {
-  db=$1
-  build_out=$2
-  log_file=$3
-  prepare_warm_build_out "$BOOTSTRAP_BUILD_OUT" "$build_out" "$GRAPH_JSON"
-  CODEQL_EXTRACTOR_GO_EXTRACT_HTML=no "$CODEQL_BIN" database trace-command "$db" -- \
-    env YA_CACHE_DIR="$YA_CACHE_DIR" YA_LOGS_ROOT="$YA_LOGS_ROOT" \
-    "$YA_BIN" make -r --no-content-uids --no-yt-store -o "$build_out" "$TARGET" >"$log_file" 2>&1
+prepare_warm_build_out() {
+  rm -rf "$WARM_BUILD_OUT"
+  cp -R "$BOOTSTRAP_BUILD_OUT" "$WARM_BUILD_OUT"
+  find "$WARM_BUILD_OUT" -type f \( -name codeql_fragment.json -o -name '*.codeql_fragment.json' \) -delete >/dev/null 2>&1 || true
+  remove_target_outputs "$BOOTSTRAP_REGISTRY_DIR" "$WARM_BUILD_OUT" "$TARGET"
 }
 
 finalize_db() {
@@ -158,34 +151,15 @@ clone_db() {
 }
 
 assemble_from_template() {
-  template_db=$1
-  assembled_trap_db=$2
-  final_db=$3
-  clone_db "$template_db" "$final_db"
-  rm -rf "$final_db/trap/go"
-  mkdir -p "$final_db/trap"
-  cp -R "$assembled_trap_db/trap/go" "$final_db/trap/go"
-}
-
-build_graph() {
-  "$YA_BIN" make -r --no-yt-store --dump-json-graph --dump-graph-to-file "$GRAPH_JSON" "$TARGET" >"$OUTPUT_ROOT/graph.log" 2>&1
-}
-
-build_manifest() {
-  graph_json=$1
-  trap_root=$2
-  output=$3
-  python3 "$MANIFEST_TOOL" \
-    --graph-json "$graph_json" \
-    --source-root "$SOURCE_ROOT" \
-    --trap-root "$trap_root" \
-    --repo-import-prefix "$REPO_IMPORT_PREFIX" \
-    --output "$output" >"$output.log" 2>&1
+  clone_db "$BOOTSTRAP_TEMPLATE_DB" "$FINAL_DB"
+  rm -rf "$FINAL_DB/trap/go"
+  mkdir -p "$FINAL_DB/trap"
+  cp -R "$ASSEMBLED_DB/trap/go" "$FINAL_DB/trap/go"
 }
 
 build_fragment_cache() {
   python3 "$BUILD_FRAGMENT_CACHE_TOOL" \
-    --manifest "$BOOTSTRAP_MANIFEST" \
+    --registry-dir "$BOOTSTRAP_REGISTRY_DIR" \
     --trap-root "$BOOTSTRAP_TEMPLATE_DB/trap/go" \
     --cache-root "$FRAGMENT_CACHE_DIR" \
     --output "$OUTPUT_ROOT/fragment-cache-build.json" >"$OUTPUT_ROOT/fragment-cache-build.log" 2>&1
@@ -194,47 +168,53 @@ build_fragment_cache() {
 inject_fragment_cache() {
   python3 "$INJECT_FRAGMENT_CACHE_TOOL" \
     --cache-root "$FRAGMENT_CACHE_DIR" \
-    --target-manifest "$WARM_MANIFEST" \
+    --executed-registry-dir "$WARM_REGISTRY_DIR" \
     --to-trap-root "$ASSEMBLED_DB/trap/go" \
     --output "$OUTPUT_ROOT/fragment-cache-inject.json" >"$OUTPUT_ROOT/fragment-cache-inject.log" 2>&1
 }
 
 bootstrap_if_needed() {
-  if [ "$REUSE_EXISTING_CACHE" = true ] && [ -f "$FRAGMENT_CACHE_DIR/index.json" ] && [ -d "$BOOTSTRAP_TEMPLATE_DB/trap/go" ] && [ -d "$BOOTSTRAP_BUILD_OUT" ]; then
+  if [ "$REUSE_EXISTING_CACHE" = true ] && [ -f "$FRAGMENT_CACHE_DIR/index.json" ] && [ -d "$BOOTSTRAP_TEMPLATE_DB/trap/go" ] && [ -d "$BOOTSTRAP_BUILD_OUT" ] && [ -d "$BOOTSTRAP_REGISTRY_DIR" ]; then
     return
   fi
 
   init_db "$BOOTSTRAP_TEMPLATE_DB"
-  trace_clean "$BOOTSTRAP_TEMPLATE_DB" "$BOOTSTRAP_BUILD_OUT" "$OUTPUT_ROOT/bootstrap-trace.log"
-  build_manifest "$GRAPH_JSON" "$BOOTSTRAP_TEMPLATE_DB/trap/go" "$BOOTSTRAP_MANIFEST"
+  rm -rf "$BOOTSTRAP_BUILD_OUT"
+  mkdir -p "$BOOTSTRAP_BUILD_OUT"
+  trace_build "$BOOTSTRAP_TEMPLATE_DB" "$BOOTSTRAP_BUILD_OUT" "$BOOTSTRAP_REGISTRY_DIR" "$OUTPUT_ROOT/bootstrap-trace.log" -r --clear --rebuild --no-yt-store
   build_fragment_cache
 }
 
-mkdir -p "$OUTPUT_ROOT" "$YA_LOGS_ROOT"
-mkdir -p "$YA_CACHE_DIR"
-
-build_graph
+mkdir -p "$OUTPUT_ROOT" "$YA_LOGS_ROOT" "$YA_CACHE_DIR"
 start_ms=$(now_ms)
 bootstrap_if_needed
 init_db "$ASSEMBLED_DB"
-trace_nocu "$ASSEMBLED_DB" "$WARM_BUILD_OUT" "$OUTPUT_ROOT/warm-trace.log"
-build_manifest "$GRAPH_JSON" "$ASSEMBLED_DB/trap/go" "$WARM_MANIFEST"
+prepare_warm_build_out
+trace_build "$ASSEMBLED_DB" "$WARM_BUILD_OUT" "$WARM_REGISTRY_DIR" "$OUTPUT_ROOT/warm-trace.log" -r --no-content-uids --no-yt-store
 inject_fragment_cache
-assemble_from_template "$BOOTSTRAP_TEMPLATE_DB" "$ASSEMBLED_DB" "$FINAL_DB"
+assemble_from_template
 finalize_db "$FINAL_DB" "$OUTPUT_ROOT/finalize.log"
 end_ms=$(now_ms)
+
+ya_cache_bytes=$(bytes_of_path "$YA_CACHE_DIR")
+fragment_cache_bytes=$(bytes_of_path "$FRAGMENT_CACHE_DIR")
+bootstrap_registry_count=$(find "$BOOTSTRAP_REGISTRY_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
+warm_registry_count=$(find "$WARM_REGISTRY_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
 
 {
   echo "target=$TARGET"
   echo "source_root=$SOURCE_ROOT"
   echo "final_db=$FINAL_DB"
-  echo "graph_json=$GRAPH_JSON"
   echo "fragment_cache_dir=$FRAGMENT_CACHE_DIR"
+  echo "bootstrap_registry_dir=$BOOTSTRAP_REGISTRY_DIR"
+  echo "warm_registry_dir=$WARM_REGISTRY_DIR"
+  echo "bootstrap_registry_count=$bootstrap_registry_count"
+  echo "warm_registry_count=$warm_registry_count"
   echo "bootstrap_template_db=$BOOTSTRAP_TEMPLATE_DB"
   echo "assembled_db=$ASSEMBLED_DB"
   echo "elapsed_ms=$((end_ms - start_ms))"
-  echo "ya_cache_bytes=$(bytes_of_path "$YA_CACHE_DIR")"
-  echo "fragment_cache_bytes=$(bytes_of_path "$FRAGMENT_CACHE_DIR")"
+  echo "ya_cache_bytes=$ya_cache_bytes"
+  echo "fragment_cache_bytes=$fragment_cache_bytes"
 } | tee "$SUMMARY_TXT"
 
-echo "artifacts: $OUTPUT_ROOT"
+printf '%s\n' "artifacts: $OUTPUT_ROOT"

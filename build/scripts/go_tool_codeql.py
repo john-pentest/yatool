@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import sys
+from pathlib import Path
 
 CODEQL_BUILD_FLAGS = {
     '-a',
@@ -297,11 +298,69 @@ def _get_env(args, gopath_root):
     return env
 
 
+def _get_trap_root(env):
+    return env.get('CODEQL_EXTRACTOR_GO_TRAP_DIR') or env.get('TRAP_FOLDER')
+
+
+def _snapshot_traps(trap_root):
+    if not trap_root or not os.path.isdir(trap_root):
+        return set()
+    root = Path(trap_root)
+    return {str(path.relative_to(root)) for path in root.rglob('*.trap.gz')}
+
+
+def _get_fragment_manifest_path(args):
+    if getattr(args, 'codeql_fragment_file', ''):
+        manifest_path = args.codeql_fragment_file
+        if not os.path.isabs(manifest_path):
+            manifest_path = os.path.join(args.output_root, manifest_path)
+        os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
+        return manifest_path
+    fragment_dir = os.environ.get('YA_CODEQL_FRAGMENT_DIR')
+    if fragment_dir:
+        os.makedirs(fragment_dir, exist_ok=True)
+        return os.path.join(fragment_dir, 'codeql_fragment.json')
+    overlay_dir = os.path.join(args.output_root, '.codeql')
+    os.makedirs(overlay_dir, exist_ok=True)
+    return os.path.join(overlay_dir, 'codeql_fragment.json')
+
+
+def _publish_fragment_manifest(payload, manifest_path):
+    with open(manifest_path, 'w') as manifest_file:
+        json.dump(payload, manifest_file, indent=2, sort_keys=True)
+
+    registry_dir = os.environ.get('YA_CODEQL_FRAGMENT_REGISTRY_DIR')
+    if not registry_dir:
+        return
+
+    os.makedirs(registry_dir, exist_ok=True)
+    registry_name = hashlib.md5(payload['output'].encode('utf-8')).hexdigest() + '.json'
+    registry_path = os.path.join(registry_dir, registry_name)
+    with open(registry_path, 'w') as manifest_file:
+        json.dump(payload, manifest_file, indent=2, sort_keys=True)
+
+
+def _write_fragment_manifest(args, trap_root, trap_relpaths):
+    manifest_path = _get_fragment_manifest_path(args)
+    payload = {
+        'module_path': args.module_path,
+        'import_path': args.import_path,
+        'pattern': _get_pattern(args),
+        'mode': args.mode,
+        'output': args.output,
+        'trap_root': trap_root or '',
+        'traps': sorted(trap_relpaths or []),
+    }
+    _publish_fragment_manifest(payload, manifest_path)
+
+
 def maybe_run(args, call, get_import_path, arc_project_prefix, vendor_prefix):
     if not _enabled(args):
+        _write_fragment_manifest(args, '', [])
         return
     extractor = _get_extractor_path(args)
     if not extractor:
+        _write_fragment_manifest(args, '', [])
         return
     if not os.path.isfile(extractor):
         raise RuntimeError('CodeQL extractor not found: {}'.format(extractor))
@@ -316,6 +375,10 @@ def maybe_run(args, call, get_import_path, arc_project_prefix, vendor_prefix):
             cmd.extend(['-overlay', overlay])
         cmd.append(_get_pattern(args))
         env = _get_env(args, gopath_root)
+        trap_root = _get_trap_root(env)
+        before_traps = _snapshot_traps(trap_root)
         call(cmd, args.source_root, env=env)
+        after_traps = _snapshot_traps(trap_root)
+        _write_fragment_manifest(args, trap_root, after_traps - before_traps)
     finally:
         _cleanup_materialized_sources(args.source_root, created_sources)

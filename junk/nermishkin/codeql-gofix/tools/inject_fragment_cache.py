@@ -10,13 +10,14 @@ def load_json(path: Path) -> dict:
         return json.load(fh)
 
 
-def build_lookup(nodes: list[dict], key: str) -> dict[str, dict]:
-    lookup = {}
-    for node in nodes:
-        value = node.get(key)
-        if value:
-            lookup[value] = node
-    return lookup
+def load_manifests(registry_dir: Path) -> list[dict]:
+    manifests = []
+    if not registry_dir.exists():
+        return manifests
+    for path in sorted(registry_dir.glob('*.json')):
+        with path.open() as fh:
+            manifests.append(json.load(fh))
+    return manifests
 
 
 def copy_rel(src_root: Path, dst_root: Path, rel_path: str, copied: list[str]) -> None:
@@ -29,77 +30,58 @@ def copy_rel(src_root: Path, dst_root: Path, rel_path: str, copied: list[str]) -
     copied.append(rel_path)
 
 
-def target_needs_fragment(node: dict) -> bool:
-    if not node.get("complete_source_fragment"):
-        return True
-    if not node.get("package_traps_found"):
-        return True
-    return False
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description='Inject cached CodeQL fragments using ya-emitted node manifests only.')
+    parser.add_argument('--cache-root', required=True)
+    parser.add_argument('--executed-registry-dir', required=True)
+    parser.add_argument('--to-trap-root', required=True)
+    parser.add_argument('--output', default='-')
+    return parser.parse_args()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Inject cached CodeQL fragment bundles into an unfinalized trap tree.")
-    parser.add_argument("--cache-root", required=True)
-    parser.add_argument("--target-manifest", required=True)
-    parser.add_argument("--to-trap-root", required=True)
-    parser.add_argument("--output", default="-")
-    args = parser.parse_args()
-
+    args = parse_args()
     cache_root = Path(args.cache_root)
-    cache_index = load_json(cache_root / "index.json")
-    target_manifest = load_json(Path(args.target_manifest))
+    cache_index = load_json(cache_root / 'index.json')
+    executed_manifests = load_manifests(Path(args.executed_registry_dir))
     dst_root = Path(args.to_trap_root)
-    src_root = cache_root / "trap" / "go"
+    src_root = cache_root / 'trap' / 'go'
 
-    by_uid = build_lookup(cache_index.get("nodes", []), "uid")
-    by_self_uid = build_lookup(cache_index.get("nodes", []), "self_uid")
-    by_module_dir = build_lookup(cache_index.get("nodes", []), "module_dir")
+    executed_module_paths = {m.get('module_path') for m in executed_manifests if m.get('module_path')}
+    executed_import_paths = {m.get('import_path') for m in executed_manifests if m.get('import_path')}
 
     copied: list[str] = []
     matched_nodes = []
 
-    for rel_path in cache_index.get("compilation_traps", []):
-        copy_rel(src_root, dst_root, rel_path, copied)
-    for rel_path in cache_index.get("residual_traps", []):
-        copy_rel(src_root, dst_root, rel_path, copied)
-
-    target_nodes = target_manifest.get("nodes", [])
-    inject_all = len(target_nodes) == 0
-    iterable = target_nodes if target_nodes else cache_index.get("nodes", [])
-    for node in iterable:
-        if not inject_all and not target_needs_fragment(node):
+    for node in cache_index.get('nodes', []):
+        if node.get('module_path') in executed_module_paths:
             continue
-        if inject_all:
-            cached = node
-            matched_nodes.append({"module_dir": node.get("module_dir"), "matched_by": "all", "value": node.get("uid")})
-        else:
-            cached = None
-            for key, lookup in (("uid", by_uid), ("self_uid", by_self_uid), ("module_dir", by_module_dir)):
-                value = node.get(key)
-                if value and value in lookup:
-                    cached = lookup[value]
-                    matched_nodes.append({"module_dir": node.get("module_dir"), "matched_by": key, "value": value})
-                    break
-            if not cached:
-                continue
-        for rel_path in cached.get("package_traps", []):
-            copy_rel(src_root, dst_root, rel_path, copied)
-        for rel_path in cached.get("source_traps", []):
+        if node.get('import_path') in executed_import_paths:
+            continue
+        matched_nodes.append(
+            {
+                'module_path': node.get('module_path'),
+                'import_path': node.get('import_path'),
+                'matched_by': 'cache-minus-executed',
+            }
+        )
+        for rel_path in node.get('traps', []):
             copy_rel(src_root, dst_root, rel_path, copied)
 
     result = {
-        "cache_root": str(cache_root),
-        "matched_node_count": len(matched_nodes),
-        "copied_count": len(copied),
-        "matched_nodes": matched_nodes,
+        'cache_root': str(cache_root),
+        'executed_registry_dir': args.executed_registry_dir,
+        'matched_node_count': len(matched_nodes),
+        'copied_count': len(copied),
+        'matched_nodes': matched_nodes,
     }
     payload = json.dumps(result, indent=2, sort_keys=True)
-    if args.output == "-":
+    if args.output == '-':
         print(payload)
     else:
-        Path(args.output).write_text(payload + "\n")
+        Path(args.output).write_text(payload + '\n')
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

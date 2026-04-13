@@ -925,6 +925,7 @@ if __name__ == '__main__':
     parser.add_argument('++vet-report-ext', default=vet_report_ext)
     parser.add_argument('++skip-tests', nargs='*', default=None)
     parser.add_argument('++ydx-file', default='')
+    parser.add_argument('++codeql-fragment-file', nargs='?', default='')
     parser.add_argument('++debug-root-map', default=None)
     parser.add_argument('++embed', action='append', nargs='*')
     parser.add_argument('++embed_xtest', action='append', nargs='*')

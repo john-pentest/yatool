@@ -5,96 +5,84 @@ import shutil
 from pathlib import Path
 
 
-def load_manifest(path: Path) -> dict:
-    with path.open() as fh:
-        return json.load(fh)
-
-
-def copy_rel(src_root: Path, dst_root: Path, rel_path: str) -> None:
+def copy_rel(src_root: Path, dst_root: Path, rel_path: str) -> bool:
     src = src_root / rel_path
     if not src.exists():
-        return
+        return False
     dst = dst_root / rel_path
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dst)
+    return True
+
+
+def load_manifests(registry_dir: Path) -> list[dict]:
+    manifests = []
+    if not registry_dir.exists():
+        return manifests
+    for path in sorted(registry_dir.glob('*.json')):
+        with path.open() as fh:
+            manifests.append(json.load(fh))
+    return manifests
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description='Materialize a CodeQL fragment cache from ya-emitted node manifests.')
+    parser.add_argument('--registry-dir', required=True)
+    parser.add_argument('--trap-root', required=True)
+    parser.add_argument('--cache-root', required=True)
+    parser.add_argument('--output', default='-')
+    return parser.parse_args()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Materialize a node-level CodeQL fragment cache from a full TRAP tree.")
-    parser.add_argument("--manifest", required=True)
-    parser.add_argument("--trap-root", required=True)
-    parser.add_argument("--cache-root", required=True)
-    parser.add_argument("--output", default="-")
-    args = parser.parse_args()
-
-    manifest = load_manifest(Path(args.manifest))
+    args = parse_args()
+    registry_dir = Path(args.registry_dir)
     trap_root = Path(args.trap_root)
     cache_root = Path(args.cache_root)
-    cache_trap_root = cache_root / "trap" / "go"
+    cache_trap_root = cache_root / 'trap' / 'go'
     cache_trap_root.mkdir(parents=True, exist_ok=True)
 
-    index_nodes = []
+    manifests = load_manifests(registry_dir)
+    nodes = []
     copied = []
-    compilation_traps = []
-    claimed = set()
-    for node in manifest.get("nodes", []):
-        if not node.get("complete_source_fragment"):
-            continue
-        node_copy = {
-            "uid": node.get("uid"),
-            "self_uid": node.get("self_uid"),
-            "module_dir": node.get("module_dir"),
-            "package_traps": list(node.get("package_traps_found", [])),
-            "source_traps": [entry["trap"] for entry in node.get("source_traps", []) if entry.get("present")],
-        }
-        if not node_copy["package_traps"] and not node_copy["source_traps"]:
-            continue
-        index_nodes.append(node_copy)
-        for rel_path in node_copy["package_traps"] + node_copy["source_traps"]:
-            copy_rel(trap_root, cache_trap_root, rel_path)
-            copied.append(rel_path)
-            claimed.add(rel_path)
 
-    comp_root = trap_root / "compilations"
-    if comp_root.exists():
-        for path in sorted(comp_root.rglob("*.trap.gz")):
-            rel_path = path.relative_to(trap_root).as_posix()
-            copy_rel(trap_root, cache_trap_root, rel_path)
-            compilation_traps.append(rel_path)
-            copied.append(rel_path)
-            claimed.add(rel_path)
-
-    residual_traps = []
-    for path in sorted(trap_root.rglob("*.trap.gz")):
-        rel_path = path.relative_to(trap_root).as_posix()
-        if rel_path in claimed:
-            continue
-        copy_rel(trap_root, cache_trap_root, rel_path)
-        residual_traps.append(rel_path)
-        copied.append(rel_path)
+    for manifest in manifests:
+        traps = []
+        for rel_path in manifest.get('traps', []):
+            if copy_rel(trap_root, cache_trap_root, rel_path):
+                traps.append(rel_path)
+                copied.append(rel_path)
+        nodes.append(
+            {
+                'module_path': manifest.get('module_path'),
+                'import_path': manifest.get('import_path'),
+                'pattern': manifest.get('pattern'),
+                'mode': manifest.get('mode'),
+                'output': manifest.get('output'),
+                'traps': traps,
+            }
+        )
 
     index = {
-        "source_root": manifest.get("source_root"),
-        "repo_import_prefix": manifest.get("repo_import_prefix"),
-        "node_count": len(index_nodes),
-        "compilation_traps": compilation_traps,
-        "residual_traps": residual_traps,
-        "nodes": index_nodes,
+        'registry_dir': str(registry_dir),
+        'trap_root': str(trap_root),
+        'node_count': len(nodes),
+        'nodes': nodes,
     }
-    (cache_root / "index.json").write_text(json.dumps(index, indent=2, sort_keys=True) + "\n")
+    (cache_root / 'index.json').write_text(json.dumps(index, indent=2, sort_keys=True) + '\n')
 
     result = {
-        "cache_root": str(cache_root),
-        "node_count": len(index_nodes),
-        "copied_count": len(copied),
+        'cache_root': str(cache_root),
+        'node_count': len(nodes),
+        'copied_count': len(copied),
     }
     payload = json.dumps(result, indent=2, sort_keys=True)
-    if args.output == "-":
+    if args.output == '-':
         print(payload)
     else:
-        Path(args.output).write_text(payload + "\n")
+        Path(args.output).write_text(payload + '\n')
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())
